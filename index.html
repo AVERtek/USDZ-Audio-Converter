@@ -1,1 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Audio Embedder (USDZ)</title>
+  <!-- Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip library for browser-side ZIP/USDZ manipulation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
+  
+  <div class="max-w-lg w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 AR Audio Embedder</h1>
+      <p class="text-slate-400 text-sm mt-1">Embed audio directly into `.usdz` files inside your browser. No server required.</p>
+    </div>
 
+    <form id="ar-form" class="space-y-4">
+      <!-- USDZ File Input -->
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1">1. Select USDZ Model</label>
+        <input type="file" id="usdz-file" accept=".usdz" required
+          class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+      </div>
+
+      <!-- Audio File Input -->
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File</label>
+        <input type="file" id="audio-file" accept=".mp3,.wav,.m4a" required
+          class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+      </div>
+
+      <!-- Spatial Coordinates -->
+      <div class="pt-2 border-t border-slate-700">
+        <label class="block text-sm font-medium text-slate-300 mb-2">Audio Position (X, Y, Z meters)</label>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <span class="text-xs text-slate-400">X Position</span>
+            <input type="number" id="pos-x" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white">
+          </div>
+          <div>
+            <span class="text-xs text-slate-400">Y Position</span>
+            <input type="number" id="pos-y" value="0.5" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white">
+          </div>
+          <div>
+            <span class="text-xs text-slate-400">Z Position</span>
+            <input type="number" id="pos-z" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white">
+          </div>
+        </div>
+      </div>
+
+      <!-- Process Button -->
+      <button type="submit" id="process-btn"
+        class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
+        Process & Prepare Download
+      </button>
+    </form>
+
+    <!-- Download Link (Hidden by default) -->
+    <div id="status-area" class="hidden text-center pt-2">
+      <p id="status-text" class="text-sm text-emerald-400 font-medium mb-3"></p>
+      <a id="download-btn" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">
+        📥 Download USDZ File
+      </a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('ar-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const usdzInput = document.getElementById('usdz-file').files[0];
+      const audioInput = document.getElementById('audio-file').files[0];
+      const btn = document.getElementById('process-btn');
+      const statusArea = document.getElementById('status-area');
+      const statusText = document.getElementById('status-text');
+      const downloadBtn = document.getElementById('download-btn');
+
+      if (!usdzInput || !audioInput) return;
+
+      btn.disabled = true;
+      btn.textContent = "Processing locally...";
+      statusArea.classList.add('hidden');
+
+      try {
+        const posX = parseFloat(document.getElementById('pos-x').value) || 0;
+        const posY = parseFloat(document.getElementById('pos-y').value) || 0;
+        const posZ = parseFloat(document.getElementById('pos-z').value) || 0;
+
+        // 1. Read input USDZ as a zip archive
+        const zip = new JSZip();
+        const loadedZip = await zip.loadAsync(usdzInput);
+
+        // 2. Read audio file as ArrayBuffer and add it into the zip root
+        const audioBuffer = await audioInput.arrayBuffer();
+        loadedZip.file(audioInput.name, audioBuffer, { compression: "STORE" });
+
+        // 3. Find and edit the main USDA scene file
+        let usdaFileName = null;
+        for (let filename in loadedZip.files) {
+          if (filename.endsWith('.usda')) {
+            usdaFileName = filename;
+            break;
+          }
+        }
+
+        const audioSnippet = `
+def Xform "AudioEmitter" (
+    prepend apiSchemas = ["Preliminary_AudioAPI"]
+) {
+    rel preliminary:audio:amplitude = 1.0
+    rel preliminary:audio:filePath = @${audioInput.name}@
+    bool preliminary:audio:loop = true
+    double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+`;
+
+        if (usdaFileName) {
+          let usdaText = await loadedZip.files[usdaFileName].async("text");
+          usdaText += audioSnippet;
+          loadedZip.file(usdaFileName, usdaText, { compression: "STORE" });
+        } else {
+          // If no USDA exists (e.g. binary USDC scene), generate a root USDA file linking the asset
+          const rootUsdaContent = `#usda 1.0\n${audioSnippet}`;
+          loadedZip.file("audio_scene.usda", rootUsdaContent, { compression: "STORE" });
+        }
+
+        // 4. Export uncompressed ZIP (USDZ compliance requirement)
+        const outputBlob = await loadedZip.generateAsync({
+          type: "blob",
+          mimeType: "model/vnd.usdz+zip",
+          compression: "STORE" // Zero-compression uncompressed archive
+        });
+
+        // 5. Create local download link
+        const downloadUrl = URL.createObjectURL(outputBlob);
+        downloadBtn.href = downloadUrl;
+        downloadBtn.download = `audio_${usdzInput.name}`;
+        
+        statusText.textContent = "Success! Your USDZ model is packaged.";
+        statusArea.classList.remove('hidden');
+
+      } catch (err) {
+        alert("Error processing USDZ file: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Process & Prepare Download";
+      }
+    });
+  </script>
+</body>
+</html>
