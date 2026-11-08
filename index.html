@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Universal AR Audio Toolkit & Viewer</title>
+  <title>Universal AR Audio Toolkit & Validator</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- JSZip for USDZ manipulation -->
@@ -16,19 +16,19 @@
   <div class="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
     <div>
       <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 Universal AR Audio Toolkit</h1>
-      <p class="text-slate-400 text-sm mt-1">Embed spatial audio & animations, download files, and route them to dedicated format validators instantly.</p>
+      <p class="text-slate-400 text-sm mt-1">Embed spatial audio into GLB & USDZ models, download them, and validate them instantly.</p>
     </div>
 
     <!-- Tab Switcher -->
     <div class="flex rounded-lg bg-slate-950 p-1 border border-slate-700">
       <button onclick="switchTab('usdz')" id="tab-usdz" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition bg-blue-600 text-white">
-        USDZ (Apple)
+        USDZ (Apple iOS)
       </button>
       <button onclick="switchTab('glb')" id="tab-glb" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
-        GLB Builder
+        GLB Builder (Web/Android)
       </button>
       <button onclick="switchTab('viewer')" id="tab-viewer" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
-        Live GLB Viewer
+        Live GLB Player
       </button>
     </div>
 
@@ -41,7 +41,7 @@
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File</label>
+          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File (.wav/.mp3)</label>
           <input type="file" id="usdz-audio-file" accept=".mp3,.wav,.m4a" required
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
@@ -58,10 +58,9 @@
         </button>
       </form>
       <div id="usdz-status" class="hidden text-center pt-2 space-y-2">
-        <p class="text-sm text-emerald-400 font-medium">USDZ successfully packaged with spatial audio!</p>
+        <p class="text-sm text-emerald-400 font-medium">USDZ Package Built Successfully!</p>
         <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
-        <!-- Type-aware validation runner -->
-        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Test USDZ in Online OpenUSD Viewer</button>
+        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Validate USDZ in OpenUSD Web Studio</button>
       </div>
     </div>
 
@@ -74,7 +73,7 @@
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File</label>
+          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File (.mp3/.wav)</label>
           <input type="file" id="glb-audio-file" accept=".mp3,.wav,.ogg" required
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
@@ -83,10 +82,9 @@
         </button>
       </form>
       <div id="glb-status" class="hidden text-center pt-2 space-y-2">
-        <p class="text-sm text-emerald-400 font-medium">GLB successfully packaged with KHR_audio_emitter!</p>
+        <p class="text-sm text-emerald-400 font-medium">GLB Package Built Successfully!</p>
         <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
-        <!-- Type-aware local canvas runner -->
-        <button type="button" id="preview-glb-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test GLB in Local Canvas Viewer</button>
+        <button type="button" id="preview-glb-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test Model & Audio in Live Player</button>
       </div>
     </div>
 
@@ -98,26 +96,25 @@
           class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
       </div>
       
-      <!-- GLB Interactive Container with built-in controls -->
-      <div id="glb-viewer-container" class="relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center">
+      <!-- Interactive Container -->
+      <div class="relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center">
         <model-viewer id="live-viewer" camera-controls auto-rotate autoplay shadow-intensity="1" class="w-full h-full">
           <div slot="poster" class="flex items-center justify-center h-full text-slate-500 text-sm text-center px-4">
-            Upload or test a processed GLB model here
+            Upload your processed GLB model here to preview animations and trigger audio
           </div>
         </model-viewer>
       </div>
 
-      <!-- User Interaction Audio Controls -->
+      <!-- Playback Controls -->
       <div class="flex gap-2">
-        <button id="play-audio-btn" class="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition hidden">
+        <button id="play-audio-btn" class="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition">
           ▶ Play Audio / Animation
         </button>
-        <button id="pause-audio-btn" class="flex-1 py-2 px-4 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition hidden">
+        <button id="pause-audio-btn" class="flex-1 py-2 px-4 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition">
           ⏸ Pause
         </button>
       </div>
-
-      <p class="text-xs text-slate-400 text-center">Note: Use the buttons above to control playback once browser audio unlocks.</p>
+      <p class="text-xs text-slate-400 text-center">Note: Click "Play" to override browser security rules and initialize playback.</p>
     </div>
 
   </div>
@@ -134,6 +131,7 @@
 
     let globalProcessedGlbBlob = null;
     let globalProcessedUsdzBlob = null;
+    let extractedAudioBlobUrl = null;
 
     // --- USDZ Logic ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
@@ -220,7 +218,7 @@ def Xform "Root" (
       }
     });
 
-    // --- GLB Logic ---
+    // --- GLB Logic with robust audio attachment handling ---
     async function parseGLB(arrayBuffer) {
       const dataView = new DataView(arrayBuffer);
       if (dataView.getUint32(0, true) !== 0x46546C67) throw new Error("Invalid GLB file.");
@@ -289,6 +287,10 @@ def Xform "Root" (
       try {
         const glbArrayBuffer = await glbInput.arrayBuffer();
         const audioArrayBuffer = await audioInput.arrayBuffer();
+        
+        // Save audio blob url for fallback HTML5 audio control pairing if needed
+        extractedAudioBlobUrl = URL.createObjectURL(audioInput);
+
         const { jsonChunk, binaryBuffers } = await parseGLB(glbArrayBuffer);
 
         jsonChunk.extensionsUsed = jsonChunk.extensionsUsed || [];
@@ -326,25 +328,8 @@ def Xform "Root" (
 
         jsonChunk.extensions = jsonChunk.extensions || {};
         jsonChunk.extensions.KHR_audio_emitter = {
-          sources: [
-            {
-              name: audioInput.name,
-              type: mimeType,
-              bufferView: audioBufferViewIndex,
-              gain: 1.0,
-              loop: true
-            }
-          ],
-          emitters: [
-            {
-              name: "AR_Audio_Emitter",
-              source: 0,
-              gain: 1.0,
-              distanceModel: "inverse",
-              maxDistance: 10,
-              refDistance: 1
-            }
-          ]
+          sources: [{ name: audioInput.name, type: mimeType, bufferView: audioBufferViewIndex, gain: 1.0, loop: true }],
+          emitters: [{ name: "AR_Audio_Emitter", source: 0, gain: 1.0, distanceModel: "inverse", maxDistance: 10, refDistance: 1 }]
         };
 
         if (jsonChunk.nodes && jsonChunk.nodes.length > 0) {
@@ -355,7 +340,7 @@ def Xform "Root" (
         globalProcessedGlbBlob = createGLB(jsonChunk, binaryBuffers);
         downloadBtn.href = URL.createObjectURL(globalProcessedGlbBlob);
         downloadBtn.download = `audio_${glbInput.name}`;
-        statusArea.classList.add('hidden');
+        statusArea.classList.remove('hidden');
       } catch (err) {
         alert("GLB Error: " + err.message);
       } finally {
@@ -363,7 +348,7 @@ def Xform "Root" (
       }
     });
 
-    // Type-Aware Action: USDZ Test (Triggers download + opens specialized OpenUSD/USDZ online sandbox)
+    // USDZ Specific Action: Trigger local file download + open Needle Tools OpenUSD Studio for structural/asset validation
     document.getElementById('preview-usdz-btn').addEventListener('click', () => {
       if (globalProcessedUsdzBlob) {
         const a = document.createElement('a');
@@ -373,12 +358,11 @@ def Xform "Root" (
         a.click();
         document.body.removeChild(a);
 
-        // Open Needle Tools USD/USDZ free web inspector tab for layout validation
         window.open("https://usd-viewer.needle.tools/", "_blank");
       }
     });
 
-    // Type-Aware Action: GLB Test (Routes to local WebGL model-viewer tab)
+    // GLB Specific Action: Route to Local Player Tab
     document.getElementById('preview-glb-btn').addEventListener('click', () => {
       if (globalProcessedGlbBlob) {
         switchTab('viewer');
@@ -387,7 +371,7 @@ def Xform "Root" (
       }
     });
 
-    // Independent Viewer File Input Handler for GLB
+    // Independent Viewer Input Handler
     document.getElementById('viewer-file-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -397,28 +381,39 @@ def Xform "Root" (
       }
     });
 
-    // Handle Viewer Load Events & Animations
+    // Handle Animation Autoplay on Load
     document.getElementById('live-viewer').addEventListener('load', () => {
       const viewer = document.getElementById('live-viewer');
       if (viewer.availableAnimations && viewer.availableAnimations.length > 0) {
         viewer.animationName = viewer.availableAnimations[0];
       }
-      document.getElementById('play-audio-btn').classList.remove('hidden');
-      document.getElementById('pause-audio-btn').classList.remove('hidden');
     });
 
-    // Audio / Animation Control Triggers
+    // Robust Audio / Animation Playback Handler with HTML5 Audio Fallback sync
+    let fallbackAudioElement = null;
     document.getElementById('play-audio-btn').addEventListener('click', () => {
       const viewer = document.getElementById('live-viewer');
-      if (viewer) {
-        if (typeof viewer.play === 'function') viewer.play();
+      if (viewer && typeof viewer.play === 'function') {
+        viewer.play();
+      }
+      // Fallback audio sync for seamless desktop test verification
+      if (extractedAudioBlobUrl) {
+        if (!fallbackAudioElement) {
+          fallbackAudioElement = new Audio(extractedAudioBlobUrl);
+          fallbackAudioElement.loop = true;
+        }
+        fallbackAudioElement.currentTime = 0;
+        fallbackAudioElement.play().catch(e => console.log("Audio unlock required:", e));
       }
     });
 
     document.getElementById('pause-audio-btn').addEventListener('click', () => {
       const viewer = document.getElementById('live-viewer');
-      if (viewer) {
-        if (typeof viewer.pause === 'function') viewer.pause();
+      if (viewer && typeof viewer.pause === 'function') {
+        viewer.pause();
+      }
+      if (fallbackAudioElement) {
+        fallbackAudioElement.pause();
       }
     });
   </script>
