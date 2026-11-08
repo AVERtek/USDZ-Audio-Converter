@@ -3,27 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Audio Embedder (USDZ & GLB)</title>
+  <title>Universal AR Audio Embedder & Viewer</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- JSZip for USDZ manipulation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Google Model Viewer for In-Browser GLB & Audio Preview -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
   
   <div class="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 Universal AR Audio Embedder</h1>
-      <p class="text-slate-400 text-sm mt-1">Embed audio directly into 3D models entirely in your browser. No server required.</p>
+      <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 Universal AR Audio Toolkit</h1>
+      <p class="text-slate-400 text-sm mt-1">Embed and test spatial audio directly in your 3D models right in your browser.</p>
     </div>
 
     <!-- Tab Switcher -->
     <div class="flex rounded-lg bg-slate-950 p-1 border border-slate-700">
-      <button onclick="switchTab('usdz')" id="tab-usdz" class="flex-1 py-2 text-sm font-medium rounded-md transition bg-blue-600 text-white">
-        USDZ (Apple AR)
+      <button onclick="switchTab('usdz')" id="tab-usdz" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition bg-blue-600 text-white">
+        USDZ (Apple)
       </button>
-      <button onclick="switchTab('glb')" id="tab-glb" class="flex-1 py-2 text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
-        GLB (Web / Android)
+      <button onclick="switchTab('glb')" id="tab-glb" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
+        GLB Builder
+      </button>
+      <button onclick="switchTab('viewer')" id="tab-viewer" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
+        Live Viewer
       </button>
     </div>
 
@@ -77,8 +82,29 @@
       </form>
       <div id="glb-status" class="hidden text-center pt-2">
         <p class="text-sm text-emerald-400 font-medium mb-3">GLB successfully packaged with audio extension!</p>
-        <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
+        <div class="space-y-2">
+          <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
+          <button type="button" id="preview-in-viewer-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test in Live Viewer</button>
+        </div>
       </div>
+    </div>
+
+    <!-- ==================== VIEWER SECTION ==================== -->
+    <div id="section-viewer" class="space-y-4 hidden">
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1">Load Audio GLB to Test</label>
+        <input type="file" id="viewer-file-input" accept=".glb"
+          class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+      </div>
+      
+      <div class="relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center">
+        <model-viewer id="live-viewer" camera-controls auto-rotate shadow-intensity="1" class="w-full h-full">
+          <div slot="poster" class="flex items-center justify-center h-full text-slate-500 text-sm">
+            Upload or test a processed GLB model here
+          </div>
+        </model-viewer>
+      </div>
+      <p class="text-xs text-slate-400 text-center">Note: Built-in audio playback works for GLB models featuring the <code class="text-purple-400">KHR_audio_emitter</code> extension.</p>
     </div>
 
   </div>
@@ -86,23 +112,15 @@
   <script>
     // Tab Switching Logic
     function switchTab(type) {
-      const usdzSec = document.getElementById('section-usdz');
-      const glbSec = document.getElementById('section-glb');
-      const tabUsdz = document.getElementById('tab-usdz');
-      const tabGlb = document.getElementById('tab-glb');
-
-      if (type === 'usdz') {
-        usdzSec.classList.remove('hidden');
-        glbSec.classList.add('hidden');
-        tabUsdz.className = "flex-1 py-2 text-sm font-medium rounded-md transition bg-blue-600 text-white";
-        tabGlb.className = "flex-1 py-2 text-sm font-medium rounded-md transition text-slate-400 hover:text-white";
-      } else {
-        glbSec.classList.remove('hidden');
-        usdzSec.classList.add('hidden');
-        tabGlb.className = "flex-1 py-2 text-sm font-medium rounded-md transition bg-blue-600 text-white";
-        tabUsdz.className = "flex-1 py-2 text-sm font-medium rounded-md transition text-slate-400 hover:text-white";
-      }
+      ['usdz', 'glb', 'viewer'].forEach(t => {
+        document.getElementById(`section-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).className = "flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition text-slate-400 hover:text-white";
+      });
+      document.getElementById(`section-${type}`).classList.remove('hidden');
+      document.getElementById(`tab-${type}`).className = "flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition bg-blue-600 text-white";
     }
+
+    let globalProcessedBlob = null;
 
     // --- USDZ Logic ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
@@ -137,15 +155,12 @@
           }
         }
 
-        if (!modelFileName) {
-          throw new Error("No valid USD model (.usdc or .usda) found inside the USDZ file.");
-        }
+        if (!modelFileName) throw new Error("No valid USD model (.usdc or .usda) found inside the USDZ file.");
 
         const safeAudioName = audioInput.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
         const audioBuffer = await audioInput.arrayBuffer();
         
         const outputZip = new JSZip();
-
         const modelData = await loadedZip.files[modelFileName].async("arraybuffer");
         outputZip.file(modelFileName, modelData, { compression: "STORE" });
 
@@ -214,7 +229,6 @@ def Xform "Root" (
       const encoder = new TextEncoder();
       let jsonString = JSON.stringify(jsonChunk);
       
-      // FIX: Ensure strict 4-byte boundary padding for the JSON chunk using spaces
       let jsonBinary = encoder.encode(jsonString);
       const jsonPaddingLen = (4 - (jsonBinary.byteLength % 4)) % 4;
       if (jsonPaddingLen > 0) {
@@ -294,14 +308,32 @@ def Xform "Root" (
           emitters: [{ name: "AR_Audio_Emitter", source: 0, gain: 1.0, distanceModel: "inverse", maxDistance: 10, refDistance: 1 }]
         };
 
-        const outputBlob = createGLB(jsonChunk, binaryBuffers);
-        downloadBtn.href = URL.createObjectURL(outputBlob);
+        globalProcessedBlob = createGLB(jsonChunk, binaryBuffers);
+        downloadBtn.href = URL.createObjectURL(globalProcessedBlob);
         downloadBtn.download = `audio_${glbInput.name}`;
         statusArea.classList.remove('hidden');
       } catch (err) {
         alert("Error: " + err.message);
       } finally {
         btn.disabled = false; btn.textContent = "Process GLB & Download";
+      }
+    });
+
+    // Send to Live Viewer direct action
+    document.getElementById('preview-in-viewer-btn').addEventListener('click', () => {
+      if (globalProcessedBlob) {
+        switchTab('viewer');
+        const viewer = document.getElementById('live-viewer');
+        viewer.src = URL.createObjectURL(globalProcessedBlob);
+      }
+    });
+
+    // Independent Viewer File Input Handler
+    document.getElementById('viewer-file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const viewer = document.getElementById('live-viewer');
+        viewer.src = URL.createObjectURL(file);
       }
     });
   </script>
