@@ -16,7 +16,7 @@
   <div class="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
     <div>
       <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 Universal AR Audio Toolkit</h1>
-      <p class="text-slate-400 text-sm mt-1">Embed and test spatial audio and animations directly in your 3D models right in your browser.</p>
+      <p class="text-slate-400 text-sm mt-1">Embed spatial audio & animations, download files, and route them to dedicated format validators instantly.</p>
     </div>
 
     <!-- Tab Switcher -->
@@ -28,7 +28,7 @@
         GLB Builder
       </button>
       <button onclick="switchTab('viewer')" id="tab-viewer" class="flex-1 py-2 text-xs sm:text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
-        Live Viewer
+        Live GLB Viewer
       </button>
     </div>
 
@@ -58,9 +58,10 @@
         </button>
       </form>
       <div id="usdz-status" class="hidden text-center pt-2 space-y-2">
-        <p class="text-sm text-emerald-400 font-medium">USDZ successfully packaged!</p>
+        <p class="text-sm text-emerald-400 font-medium">USDZ successfully packaged with spatial audio!</p>
         <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
-        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Download & Open Online Viewer</button>
+        <!-- Type-aware validation runner -->
+        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Test USDZ in Online OpenUSD Viewer</button>
       </div>
     </div>
 
@@ -84,7 +85,8 @@
       <div id="glb-status" class="hidden text-center pt-2 space-y-2">
         <p class="text-sm text-emerald-400 font-medium">GLB successfully packaged with KHR_audio_emitter!</p>
         <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
-        <button type="button" id="preview-glb-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test GLB in Local Viewer</button>
+        <!-- Type-aware local canvas runner -->
+        <button type="button" id="preview-glb-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test GLB in Local Canvas Viewer</button>
       </div>
     </div>
 
@@ -96,21 +98,26 @@
           class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
       </div>
       
-      <!-- GLB Interactive Container -->
+      <!-- GLB Interactive Container with built-in controls -->
       <div id="glb-viewer-container" class="relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center">
         <model-viewer id="live-viewer" camera-controls auto-rotate autoplay shadow-intensity="1" class="w-full h-full">
           <div slot="poster" class="flex items-center justify-center h-full text-slate-500 text-sm text-center px-4">
-            Upload a processed GLB model to preview here
+            Upload or test a processed GLB model here
           </div>
         </model-viewer>
       </div>
 
-      <!-- User Interaction Button to Unlock Browser Audio Policies for GLB -->
-      <button id="play-audio-btn" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition hidden">
-        🔊 Force Play Audio & Animations
-      </button>
+      <!-- User Interaction Audio Controls -->
+      <div class="flex gap-2">
+        <button id="play-audio-btn" class="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition hidden">
+          ▶ Play Audio / Animation
+        </button>
+        <button id="pause-audio-btn" class="flex-1 py-2 px-4 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition hidden">
+          ⏸ Pause
+        </button>
+      </div>
 
-      <p class="text-xs text-slate-400 text-center">Note: Click the button above to satisfy browser audio autoplay restrictions.</p>
+      <p class="text-xs text-slate-400 text-center">Note: Use the buttons above to control playback once browser audio unlocks.</p>
     </div>
 
   </div>
@@ -348,7 +355,7 @@ def Xform "Root" (
         globalProcessedGlbBlob = createGLB(jsonChunk, binaryBuffers);
         downloadBtn.href = URL.createObjectURL(globalProcessedGlbBlob);
         downloadBtn.download = `audio_${glbInput.name}`;
-        statusArea.classList.remove('hidden');
+        statusArea.classList.add('hidden');
       } catch (err) {
         alert("GLB Error: " + err.message);
       } finally {
@@ -356,7 +363,7 @@ def Xform "Root" (
       }
     });
 
-    // Button: Test USDZ
+    // Type-Aware Action: USDZ Test (Triggers download + opens specialized OpenUSD/USDZ online sandbox)
     document.getElementById('preview-usdz-btn').addEventListener('click', () => {
       if (globalProcessedUsdzBlob) {
         const a = document.createElement('a');
@@ -366,11 +373,12 @@ def Xform "Root" (
         a.click();
         document.body.removeChild(a);
 
-        window.open("https://gltf-viewer.donmccurdy.com/", "_blank");
+        // Open Needle Tools USD/USDZ free web inspector tab for layout validation
+        window.open("https://usd-viewer.needle.tools/", "_blank");
       }
     });
 
-    // Button: Test GLB in Local Viewer Tab
+    // Type-Aware Action: GLB Test (Routes to local WebGL model-viewer tab)
     document.getElementById('preview-glb-btn').addEventListener('click', () => {
       if (globalProcessedGlbBlob) {
         switchTab('viewer');
@@ -379,7 +387,7 @@ def Xform "Root" (
       }
     });
 
-    // Independent Viewer File Input Handler
+    // Independent Viewer File Input Handler for GLB
     document.getElementById('viewer-file-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -396,14 +404,21 @@ def Xform "Root" (
         viewer.animationName = viewer.availableAnimations[0];
       }
       document.getElementById('play-audio-btn').classList.remove('hidden');
+      document.getElementById('pause-audio-btn').classList.remove('hidden');
     });
 
-    // Force Play Audio Handler
+    // Audio / Animation Control Triggers
     document.getElementById('play-audio-btn').addEventListener('click', () => {
       const viewer = document.getElementById('live-viewer');
-      if (viewer && typeof viewer.play === 'function') {
-        viewer.currentTime = 0;
-        viewer.play();
+      if (viewer) {
+        if (typeof viewer.play === 'function') viewer.play();
+      }
+    });
+
+    document.getElementById('pause-audio-btn').addEventListener('click', () => {
+      const viewer = document.getElementById('live-viewer');
+      if (viewer) {
+        if (typeof viewer.pause === 'function') viewer.pause();
       }
     });
   </script>
