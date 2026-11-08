@@ -3,85 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Audio Embedder (USDZ)</title>
-  <!-- Tailwind CSS for styling -->
+  <title>AR Audio Embedder (USDZ & GLB)</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- JSZip library for browser-side ZIP/USDZ manipulation -->
+  <!-- JSZip for USDZ manipulation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
   
-  <div class="max-w-lg w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
+  <div class="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
     <div>
-      <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 AR Audio Embedder</h1>
-      <p class="text-slate-400 text-sm mt-1">Embed audio directly into `.usdz` files inside your browser. No server required.</p>
+      <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 Universal AR Audio Embedder</h1>
+      <p class="text-slate-400 text-sm mt-1">Embed audio directly into 3D models entirely in your browser. No server required.</p>
     </div>
 
-    <form id="ar-form" class="space-y-4">
-      <!-- USDZ File Input -->
-      <div>
-        <label class="block text-sm font-medium text-slate-300 mb-1">1. Select USDZ Model</label>
-        <input type="file" id="usdz-file" accept=".usdz" required
-          class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
-      </div>
+    <!-- Tab Switcher -->
+    <div class="flex rounded-lg bg-slate-950 p-1 border border-slate-700">
+      <button onclick="switchTab('usdz')" id="tab-usdz" class="flex-1 py-2 text-sm font-medium rounded-md transition bg-blue-600 text-white">
+        USDZ (Apple AR)
+      </button>
+      <button onclick="switchTab('glb')" id="tab-glb" class="flex-1 py-2 text-sm font-medium rounded-md transition text-slate-400 hover:text-white">
+        GLB (Web / Android)
+      </button>
+    </div>
 
-      <!-- Audio File Input -->
-      <div>
-        <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File</label>
-        <input type="file" id="audio-file" accept=".mp3,.wav,.m4a" required
-          class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
-      </div>
-
-      <!-- Spatial Coordinates -->
-      <div class="pt-2 border-t border-slate-700">
-        <label class="block text-sm font-medium text-slate-300 mb-2">Audio Position (X, Y, Z meters)</label>
-        <div class="grid grid-cols-3 gap-3">
-          <div>
-            <span class="text-xs text-slate-400">X Position</span>
-            <input type="number" id="pos-x" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white">
-          </div>
-          <div>
-            <span class="text-xs text-slate-400">Y Position</span>
-            <input type="number" id="pos-y" value="0.5" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white">
-          </div>
-          <div>
-            <span class="text-xs text-slate-400">Z Position</span>
-            <input type="number" id="pos-z" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white">
+    <!-- ==================== USDZ SECTION ==================== -->
+    <div id="section-usdz" class="space-y-4">
+      <form id="usdz-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">1. Select USDZ Model</label>
+          <input type="file" id="usdz-file" accept=".usdz" required
+            class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File</label>
+          <input type="file" id="usdz-audio-file" accept=".mp3,.wav,.m4a" required
+            class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+        </div>
+        <div class="pt-2 border-t border-slate-700">
+          <label class="block text-sm font-medium text-slate-300 mb-2">Audio Position (X, Y, Z meters)</label>
+          <div class="grid grid-cols-3 gap-3">
+            <div><span class="text-xs text-slate-400">X</span><input type="number" id="pos-x" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
+            <div><span class="text-xs text-slate-400">Y</span><input type="number" id="pos-y" value="0.5" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
+            <div><span class="text-xs text-slate-400">Z</span><input type="number" id="pos-z" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
           </div>
         </div>
+        <button type="submit" id="usdz-btn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
+          Process USDZ & Download
+        </button>
+      </form>
+      <div id="usdz-status" class="hidden text-center pt-2">
+        <p class="text-sm text-emerald-400 font-medium mb-3">USDZ successfully packaged!</p>
+        <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
       </div>
-
-      <!-- Process Button -->
-      <button type="submit" id="process-btn"
-        class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
-        Process & Prepare Download
-      </button>
-    </form>
-
-    <!-- Download Link (Hidden by default) -->
-    <div id="status-area" class="hidden text-center pt-2">
-      <p id="status-text" class="text-sm text-emerald-400 font-medium mb-3"></p>
-      <a id="download-btn" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">
-        📥 Download USDZ File
-      </a>
     </div>
+
+    <!-- ==================== GLB SECTION ==================== -->
+    <div id="section-glb" class="space-y-4 hidden">
+      <form id="glb-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">1. Select GLB Model</label>
+          <input type="file" id="glb-file" accept=".glb" required
+            class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File</label>
+          <input type="file" id="glb-audio-file" accept=".mp3,.wav,.ogg" required
+            class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
+        </div>
+        <button type="submit" id="glb-btn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
+          Process GLB & Download
+        </button>
+      </form>
+      <div id="glb-status" class="hidden text-center pt-2">
+        <p class="text-sm text-emerald-400 font-medium mb-3">GLB successfully packaged with audio extension!</p>
+        <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
+      </div>
+    </div>
+
   </div>
 
   <script>
-    document.getElementById('ar-form').addEventListener('submit', async (e) => {
+    // Tab Switching Logic
+    function switchTab(type) {
+      const usdzSec = document.getElementById('section-usdz');
+      const glbSec = document.getElementById('section-glb');
+      const tabUsdz = document.getElementById('tab-usdz');
+      const tabGlb = document.getElementById('tab-glb');
+
+      if (type === 'usdz') {
+        usdzSec.classList.remove('hidden');
+        glbSec.classList.add('hidden');
+        tabUsdz.className = "flex-1 py-2 text-sm font-medium rounded-md transition bg-blue-600 text-white";
+        tabGlb.className = "flex-1 py-2 text-sm font-medium rounded-md transition text-slate-400 hover:text-white";
+      } else {
+        glbSec.classList.remove('hidden');
+        usdzSec.classList.add('hidden');
+        tabGlb.className = "flex-1 py-2 text-sm font-medium rounded-md transition bg-blue-600 text-white";
+        tabUsdz.className = "flex-1 py-2 text-sm font-medium rounded-md transition text-slate-400 hover:text-white";
+      }
+    }
+
+    // --- USDZ Logic ---
+    document.getElementById('usdz-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
       const usdzInput = document.getElementById('usdz-file').files[0];
-      const audioInput = document.getElementById('audio-file').files[0];
-      const btn = document.getElementById('process-btn');
-      const statusArea = document.getElementById('status-area');
-      const statusText = document.getElementById('status-text');
-      const downloadBtn = document.getElementById('download-btn');
+      const audioInput = document.getElementById('usdz-audio-file').files[0];
+      const btn = document.getElementById('usdz-btn');
+      const statusArea = document.getElementById('usdz-status');
+      const downloadBtn = document.getElementById('usdz-download');
 
       if (!usdzInput || !audioInput) return;
-
-      btn.disabled = true;
-      btn.textContent = "Processing locally...";
+      btn.disabled = true; btn.textContent = "Processing USDZ...";
       statusArea.classList.add('hidden');
 
       try {
@@ -89,65 +122,140 @@
         const posY = parseFloat(document.getElementById('pos-y').value) || 0;
         const posZ = parseFloat(document.getElementById('pos-z').value) || 0;
 
-        // 1. Read input USDZ as a zip archive
         const zip = new JSZip();
         const loadedZip = await zip.loadAsync(usdzInput);
-
-        // 2. Read audio file as ArrayBuffer and add it into the zip root
         const audioBuffer = await audioInput.arrayBuffer();
         loadedZip.file(audioInput.name, audioBuffer, { compression: "STORE" });
 
-        // 3. Find and edit the main USDA scene file
         let usdaFileName = null;
         for (let filename in loadedZip.files) {
-          if (filename.endsWith('.usda')) {
-            usdaFileName = filename;
-            break;
-          }
+          if (filename.endsWith('.usda')) { usdaFileName = filename; break; }
         }
 
-        const audioSnippet = `
-def Xform "AudioEmitter" (
-    prepend apiSchemas = ["Preliminary_AudioAPI"]
-) {
-    rel preliminary:audio:amplitude = 1.0
-    rel preliminary:audio:filePath = @${audioInput.name}@
-    bool preliminary:audio:loop = true
-    double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
-    uniform token[] xformOpOrder = ["xformOp:translate"]
-}
-`;
+        const audioSnippet = `\ndef Xform "AudioEmitter" (\n    prepend apiSchemas = ["Preliminary_AudioAPI"]\n) {\n    rel preliminary:audio:amplitude = 1.0\n    rel preliminary:audio:filePath = @${audioInput.name}@\n    bool preliminary:audio:loop = true\n    double3 xformOp:translate = (${posX}, ${posY}, ${posZ})\n    uniform token[] xformOpOrder = ["xformOp:translate"]\n}\n`;
 
         if (usdaFileName) {
           let usdaText = await loadedZip.files[usdaFileName].async("text");
           usdaText += audioSnippet;
           loadedZip.file(usdaFileName, usdaText, { compression: "STORE" });
         } else {
-          // If no USDA exists (e.g. binary USDC scene), generate a root USDA file linking the asset
-          const rootUsdaContent = `#usda 1.0\n${audioSnippet}`;
-          loadedZip.file("audio_scene.usda", rootUsdaContent, { compression: "STORE" });
+          loadedZip.file("audio_scene.usda", `#usda 1.0\n${audioSnippet}`, { compression: "STORE" });
         }
 
-        // 4. Export uncompressed ZIP (USDZ compliance requirement)
-        const outputBlob = await loadedZip.generateAsync({
-          type: "blob",
-          mimeType: "model/vnd.usdz+zip",
-          compression: "STORE" // Zero-compression uncompressed archive
-        });
-
-        // 5. Create local download link
-        const downloadUrl = URL.createObjectURL(outputBlob);
-        downloadBtn.href = downloadUrl;
+        const outputBlob = await loadedZip.generateAsync({ type: "blob", mimeType: "model/vnd.usdz+zip", compression: "STORE" });
+        downloadBtn.href = URL.createObjectURL(outputBlob);
         downloadBtn.download = `audio_${usdzInput.name}`;
-        
-        statusText.textContent = "Success! Your USDZ model is packaged.";
         statusArea.classList.remove('hidden');
-
       } catch (err) {
-        alert("Error processing USDZ file: " + err.message);
+        alert("Error: " + err.message);
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Process & Prepare Download";
+        btn.disabled = false; btn.textContent = "Process USDZ & Download";
+      }
+    });
+
+    // --- GLB Logic ---
+    async function parseGLB(arrayBuffer) {
+      const dataView = new DataView(arrayBuffer);
+      if (dataView.getUint32(0, true) !== 0x46546C67) throw new Error("Invalid GLB file.");
+      let jsonChunk = null, binaryBuffers = [];
+      let offset = 12;
+      while (offset < arrayBuffer.byteLength) {
+        const chunkSize = dataView.getUint32(offset, true);
+        const chunkType = dataView.getUint32(offset + 4, true);
+        const chunkData = arrayBuffer.slice(offset + 8, offset + 8 + chunkSize);
+        if (chunkType === 0x4E4F534A) jsonChunk = JSON.parse(new TextDecoder('utf8').decode(chunkData));
+        else if (chunkType === 0x004E4942) binaryBuffers.push(chunkData);
+        offset += 8 + chunkSize;
+      }
+      return { jsonChunk, binaryBuffers };
+    }
+
+    function createGLB(jsonChunk, binaryBuffers) {
+      const encoder = new TextEncoder();
+      let jsonString = JSON.stringify(jsonChunk);
+      while (jsonString.length % 4 !== 0) jsonString += ' ';
+      const jsonBinary = encoder.encode(jsonString);
+
+      let totalBinLength = binaryBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
+      const paddingBinLen = (4 - (totalBinLength % 4)) % 4;
+      const totalLength = 12 + 8 + jsonBinary.byteLength + 8 + totalBinLength + paddingBinLen;
+      const glbView = new Uint8Array(totalLength);
+      const dataView = new DataView(glbView.buffer);
+
+      dataView.setUint32(0, 0x46546C67, true);
+      dataView.setUint32(4, 2, true);
+      dataView.setUint32(8, totalLength, true);
+
+      let cursor = 12;
+      dataView.setUint32(cursor, jsonBinary.byteLength, true);
+      dataView.setUint32(cursor + 4, 0x4E4F534A, true);
+      cursor += 8;
+      glbView.set(jsonBinary, cursor);
+      cursor += jsonBinary.byteLength;
+
+      dataView.setUint32(cursor, totalBinLength + paddingBinLen, true);
+      dataView.setUint32(cursor + 4, 0x004E4942, true);
+      cursor += 8;
+      for (const buf of binaryBuffers) {
+        glbView.set(new Uint8Array(buf), cursor);
+        cursor += buf.byteLength;
+      }
+      return new Blob([glbView], { type: 'model/gltf-binary' });
+    }
+
+    document.getElementById('glb-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const glbInput = document.getElementById('glb-file').files[0];
+      const audioInput = document.getElementById('glb-audio-file').files[0];
+      const btn = document.getElementById('glb-btn');
+      const statusArea = document.getElementById('glb-status');
+      const downloadBtn = document.getElementById('glb-download');
+
+      if (!glbInput || !audioInput) return;
+      btn.disabled = true; btn.textContent = "Processing GLB...";
+      statusArea.classList.add('hidden');
+
+      try {
+        const glbArrayBuffer = await glbInput.arrayBuffer();
+        const audioArrayBuffer = await audioInput.arrayBuffer();
+        const { jsonChunk, binaryBuffers } = await parseGLB(glbArrayBuffer);
+
+        jsonChunk.extensionsUsed = jsonChunk.extensionsUsed || [];
+        if (!jsonChunk.extensionsUsed.includes("KHR_audio_emitter")) jsonChunk.extensionsUsed.push("KHR_audio_emitter");
+
+        const currentBufferByteLength = binaryBuffers[0].byteLength;
+        const paddingLen = (4 - (audioArrayBuffer.byteLength % 4)) % 4;
+        let paddedAudioBuffer = audioArrayBuffer;
+        if (paddingLen > 0) {
+          const tmp = new Uint8Array(audioArrayBuffer.byteLength + paddingLen);
+          tmp.set(new Uint8Array(audioArrayBuffer));
+          paddedAudioBuffer = tmp.buffer;
+        }
+
+        const combinedBin = new Uint8Array(currentBufferByteLength + paddedAudioBuffer.byteLength);
+        combinedBin.set(new Uint8Array(binaryBuffers[0]), 0);
+        combinedBin.set(new Uint8Array(paddedAudioBuffer), currentBufferByteLength);
+        binaryBuffers[0] = combinedBin.buffer;
+
+        jsonChunk.buffers = [{ byteLength: combinedBin.byteLength }];
+        jsonChunk.bufferViews = jsonChunk.bufferViews || [];
+        const audioBufferViewIndex = jsonChunk.bufferViews.length;
+        jsonChunk.bufferViews.push({ buffer: 0, byteOffset: currentBufferByteLength, byteLength: audioArrayBuffer.byteLength });
+
+        jsonChunk.extensions = jsonChunk.extensions || {};
+        jsonChunk.extensions.KHR_audio_emitter = {
+          sources: [{ name: audioInput.name, type: "audio/mp3", bufferView: audioBufferViewIndex, gain: 1.0, loop: true }],
+          emitters: [{ name: "AR_Audio_Emitter", source: 0, gain: 1.0, distanceModel: "inverse", maxDistance: 10, refDistance: 1 }]
+        };
+
+        const outputBlob = createGLB(jsonChunk, binaryBuffers);
+        downloadBtn.href = URL.createObjectURL(outputBlob);
+        downloadBtn.download = `audio_${glbInput.name}`;
+        statusArea.classList.remove('hidden');
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = "Process GLB & Download";
       }
     });
   </script>
