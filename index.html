@@ -125,7 +125,6 @@
         const zip = new JSZip();
         const loadedZip = await zip.loadAsync(usdzInput);
 
-        // Find existing model file (.usdc or .usda) inside the package
         let modelFileName = null;
         for (let filename in loadedZip.files) {
           if (!loadedZip.files[filename].dir) {
@@ -145,14 +144,11 @@
         const safeAudioName = audioInput.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
         const audioBuffer = await audioInput.arrayBuffer();
         
-        // Build a fresh output container to avoid corruption
         const outputZip = new JSZip();
 
-        // Copy model file
         const modelData = await loadedZip.files[modelFileName].async("arraybuffer");
         outputZip.file(modelFileName, modelData, { compression: "STORE" });
 
-        // Copy other assets (textures, etc.) if any
         for (let filename in loadedZip.files) {
           if (filename !== modelFileName && !loadedZip.files[filename].dir) {
             if (!filename.endsWith('.usda') && !filename.endsWith('.usdc')) {
@@ -162,10 +158,8 @@
           }
         }
 
-        // Add audio file with STORE compression
         outputZip.file(safeAudioName, audioBuffer, { compression: "STORE" });
 
-        // Generate wrapper USDA file referencing model + audio emitter
         const sceneUsdaContent = `#usda 1.0
 (
     defaultPrim = "Root"
@@ -219,8 +213,14 @@ def Xform "Root" (
     function createGLB(jsonChunk, binaryBuffers) {
       const encoder = new TextEncoder();
       let jsonString = JSON.stringify(jsonChunk);
-      while (jsonString.length % 4 !== 0) jsonString += ' ';
-      const jsonBinary = encoder.encode(jsonString);
+      
+      // FIX: Ensure strict 4-byte boundary padding for the JSON chunk using spaces
+      let jsonBinary = encoder.encode(jsonString);
+      const jsonPaddingLen = (4 - (jsonBinary.byteLength % 4)) % 4;
+      if (jsonPaddingLen > 0) {
+        jsonString += ' '.repeat(jsonPaddingLen);
+        jsonBinary = encoder.encode(jsonString);
+      }
 
       let totalBinLength = binaryBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
       const paddingBinLen = (4 - (totalBinLength % 4)) % 4;
