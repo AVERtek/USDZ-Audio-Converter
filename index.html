@@ -60,7 +60,7 @@
       <div id="usdz-status" class="hidden text-center pt-2 space-y-2">
         <p class="text-sm text-emerald-400 font-medium">USDZ successfully packaged!</p>
         <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
-        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Test USDZ in Online Viewer & Download</button>
+        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Download & Open Online Viewer</button>
       </div>
     </div>
 
@@ -189,12 +189,11 @@
 def Xform "Root" (
     prepend references = @${modelFileName}@
 ) {
-    def Xform "AudioEmitter" (
-        prepend apiSchemas = ["Preliminary_AudioAPI"]
-    ) {
-        rel preliminary:audio:amplitude = 1.0
-        rel preliminary:audio:filePath = @${safeAudioName}@
-        bool preliminary:audio:loop = true
+    def SpatialAudio "AudioEmitter" {
+        rel filePath = @${safeAudioName}@
+        uniform token auralMode = "spatial"
+        uniform token playbackMode = "loopFromStage"
+        float volume = 1.0
         double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -214,7 +213,7 @@ def Xform "Root" (
       }
     });
 
-    // --- GLB Logic (Fixed buffer view integration for KHR_audio_emitter) ---
+    // --- GLB Logic ---
     async function parseGLB(arrayBuffer) {
       const dataView = new DataView(arrayBuffer);
       if (dataView.getUint32(0, true) !== 0x46546C67) throw new Error("Invalid GLB file.");
@@ -290,7 +289,6 @@ def Xform "Root" (
           jsonChunk.extensionsUsed.push("KHR_audio_emitter");
         }
 
-        // Handle binary data padding to 4-byte boundaries
         const currentBufferByteLength = binaryBuffers[0].byteLength;
         const paddingLen = (4 - (audioArrayBuffer.byteLength % 4)) % 4;
         let paddedAudioBuffer = audioArrayBuffer;
@@ -315,7 +313,6 @@ def Xform "Root" (
           byteLength: audioArrayBuffer.byteLength
         });
 
-        // Detect mime type
         let mimeType = "audio/mpeg";
         if (audioInput.name.endsWith('.wav')) mimeType = "audio/wav";
         else if (audioInput.name.endsWith('.ogg')) mimeType = "audio/ogg";
@@ -343,7 +340,6 @@ def Xform "Root" (
           ]
         };
 
-        // Bind emitter to the root scene node or default node
         if (jsonChunk.nodes && jsonChunk.nodes.length > 0) {
           jsonChunk.nodes[0].extensions = jsonChunk.nodes[0].extensions || {};
           jsonChunk.nodes[0].extensions.KHR_audio_emitter = { emitter: 0 };
@@ -360,7 +356,7 @@ def Xform "Root" (
       }
     });
 
-    // Button: Test USDZ (Downloads file + opens online 3D inspection sandbox)
+    // Button: Test USDZ
     document.getElementById('preview-usdz-btn').addEventListener('click', () => {
       if (globalProcessedUsdzBlob) {
         const a = document.createElement('a');
@@ -370,8 +366,7 @@ def Xform "Root" (
         a.click();
         document.body.removeChild(a);
 
-        // Open free AR validator sandbox in a new tab for instant cloud verification
-        window.open("https://ar-code.com/3d-viewer", "_blank");
+        window.open("https://gltf-viewer.donmccurdy.com/", "_blank");
       }
     });
 
