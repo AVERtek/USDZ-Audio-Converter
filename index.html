@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- JSZip for USDZ manipulation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <!-- Google Model Viewer for In-Browser GLB & Audio Preview -->
+  <!-- Google Model Viewer -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-6">
@@ -48,9 +48,9 @@
         <div class="pt-2 border-t border-slate-700">
           <label class="block text-sm font-medium text-slate-300 mb-2">Audio Position (X, Y, Z meters)</label>
           <div class="grid grid-cols-3 gap-3">
-            <div><span class="text-xs text-slate-400">X</span><input type="number" id="pos-x" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
-            <div><span class="text-xs text-slate-400">Y</span><input type="number" id="pos-y" value="0.5" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
-            <div><span class="text-xs text-slate-400">Z</span><input type="number" id="pos-z" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
+            <div><span class="text-xs text-slate-400">X</span><input type="number" id="usdz-pos-x" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
+            <div><span class="text-xs text-slate-400">Y</span><input type="number" id="usdz-pos-y" value="0.5" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
+            <div><span class="text-xs text-slate-400">Z</span><input type="number" id="usdz-pos-z" value="0.0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-white"></div>
           </div>
         </div>
         <button type="submit" id="usdz-btn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
@@ -60,7 +60,7 @@
       <div id="usdz-status" class="hidden text-center pt-2 space-y-2">
         <p class="text-sm text-emerald-400 font-medium">USDZ successfully packaged!</p>
         <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
-        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test USDZ in AR Quick Look Card</button>
+        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🌐 Test USDZ in Online Viewer & Download</button>
       </div>
     </div>
 
@@ -82,17 +82,17 @@
         </button>
       </form>
       <div id="glb-status" class="hidden text-center pt-2 space-y-2">
-        <p class="text-sm text-emerald-400 font-medium">GLB successfully packaged with audio extension!</p>
+        <p class="text-sm text-emerald-400 font-medium">GLB successfully packaged with KHR_audio_emitter!</p>
         <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
-        <button type="button" id="preview-glb-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test GLB in Viewer</button>
+        <button type="button" id="preview-glb-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test GLB in Local Viewer</button>
       </div>
     </div>
 
     <!-- ==================== VIEWER SECTION ==================== -->
     <div id="section-viewer" class="space-y-4 hidden">
       <div>
-        <label class="block text-sm font-medium text-slate-300 mb-1">Load Model to Test (.glb or .usdz)</label>
-        <input type="file" id="viewer-file-input" accept=".glb,.usdz"
+        <label class="block text-sm font-medium text-slate-300 mb-1">Load GLB Model to Test</label>
+        <input type="file" id="viewer-file-input" accept=".glb"
           class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
       </div>
       
@@ -100,35 +100,22 @@
       <div id="glb-viewer-container" class="relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center">
         <model-viewer id="live-viewer" camera-controls auto-rotate autoplay shadow-intensity="1" class="w-full h-full">
           <div slot="poster" class="flex items-center justify-center h-full text-slate-500 text-sm text-center px-4">
-            Upload a processed GLB or USDZ model to preview here
+            Upload a processed GLB model to preview here
           </div>
         </model-viewer>
       </div>
 
-      <!-- USDZ AR Quick Look Card (Hidden by default) -->
-      <div id="usdz-viewer-card" class="hidden relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex flex-col items-center justify-center p-6 text-center space-y-4">
-        <div class="text-4xl">🍏</div>
-        <div>
-          <h3 class="font-bold text-white text-lg">Apple AR Quick Look Ready</h3>
-          <p class="text-xs text-slate-400 mt-1">USDZ files require iOS Safari to test spatial audio and AR placement natively.</p>
-        </div>
-        <a id="ar-quick-look-link" rel="ar" href="#" class="py-3 px-6 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition inline-block shadow">
-          🚀 Launch iOS AR Quick Look
-        </a>
-      </div>
-
       <!-- User Interaction Button to Unlock Browser Audio Policies for GLB -->
       <button id="play-audio-btn" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition hidden">
-        🔊 Enable / Restart Audio & Animations
+        🔊 Force Play Audio & Animations
       </button>
 
-      <p id="viewer-instructions" class="text-xs text-slate-400 text-center">Note: GLB audio plays via browser click triggers. USDZ audio triggers inside iOS AR Quick Look.</p>
+      <p class="text-xs text-slate-400 text-center">Note: Click the button above to satisfy browser audio autoplay restrictions.</p>
     </div>
 
   </div>
 
   <script>
-    // Tab Switching Logic
     function switchTab(type) {
       ['usdz', 'glb', 'viewer'].forEach(t => {
         document.getElementById(`section-${t}`).classList.add('hidden');
@@ -140,29 +127,6 @@
 
     let globalProcessedGlbBlob = null;
     let globalProcessedUsdzBlob = null;
-
-    function renderInViewer(blob, filename) {
-      const blobUrl = URL.createObjectURL(blob);
-      const glbContainer = document.getElementById('glb-viewer-container');
-      const usdzCard = document.getElementById('usdz-viewer-card');
-      const audioBtn = document.getElementById('play-audio-btn');
-
-      switchTab('viewer');
-      if (filename.toLowerCase().endsWith('.usdz')) {
-        glbContainer.classList.add('hidden');
-        usdzCard.classList.remove('hidden');
-        audioBtn.classList.add('hidden');
-        
-        const arLink = document.getElementById('ar-quick-look-link');
-        arLink.href = blobUrl;
-        arLink.download = filename;
-      } else {
-        usdzCard.classList.add('hidden');
-        glbContainer.classList.remove('hidden');
-        const viewer = document.getElementById('live-viewer');
-        viewer.src = blobUrl;
-      }
-    }
 
     // --- USDZ Logic ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
@@ -178,9 +142,9 @@
       statusArea.classList.add('hidden');
 
       try {
-        const posX = parseFloat(document.getElementById('pos-x').value) || 0;
-        const posY = parseFloat(document.getElementById('pos-y').value) || 0;
-        const posZ = parseFloat(document.getElementById('pos-z').value) || 0;
+        const posX = parseFloat(document.getElementById('usdz-pos-x').value) || 0;
+        const posY = parseFloat(document.getElementById('usdz-pos-y').value) || 0;
+        const posZ = parseFloat(document.getElementById('usdz-pos-z').value) || 0;
 
         const zip = new JSZip();
         const loadedZip = await zip.loadAsync(usdzInput);
@@ -244,13 +208,13 @@ def Xform "Root" (
         downloadBtn.download = `audio_${usdzInput.name}`;
         statusArea.classList.remove('hidden');
       } catch (err) {
-        alert("Error: " + err.message);
+        alert("USDZ Error: " + err.message);
       } finally {
         btn.disabled = false; btn.textContent = "Process USDZ & Download";
       }
     });
 
-    // --- GLB Logic ---
+    // --- GLB Logic (Fixed buffer view integration for KHR_audio_emitter) ---
     async function parseGLB(arrayBuffer) {
       const dataView = new DataView(arrayBuffer);
       if (dataView.getUint32(0, true) !== 0x46546C67) throw new Error("Invalid GLB file.");
@@ -270,7 +234,6 @@ def Xform "Root" (
     function createGLB(jsonChunk, binaryBuffers) {
       const encoder = new TextEncoder();
       let jsonString = JSON.stringify(jsonChunk);
-      
       let jsonBinary = encoder.encode(jsonString);
       const jsonPaddingLen = (4 - (jsonBinary.byteLength % 4)) % 4;
       if (jsonPaddingLen > 0) {
@@ -323,8 +286,11 @@ def Xform "Root" (
         const { jsonChunk, binaryBuffers } = await parseGLB(glbArrayBuffer);
 
         jsonChunk.extensionsUsed = jsonChunk.extensionsUsed || [];
-        if (!jsonChunk.extensionsUsed.includes("KHR_audio_emitter")) jsonChunk.extensionsUsed.push("KHR_audio_emitter");
+        if (!jsonChunk.extensionsUsed.includes("KHR_audio_emitter")) {
+          jsonChunk.extensionsUsed.push("KHR_audio_emitter");
+        }
 
+        // Handle binary data padding to 4-byte boundaries
         const currentBufferByteLength = binaryBuffers[0].byteLength;
         const paddingLen = (4 - (audioArrayBuffer.byteLength % 4)) % 4;
         let paddedAudioBuffer = audioArrayBuffer;
@@ -340,31 +306,63 @@ def Xform "Root" (
         binaryBuffers[0] = combinedBin.buffer;
 
         jsonChunk.buffers = [{ byteLength: combinedBin.byteLength }];
+        
         jsonChunk.bufferViews = jsonChunk.bufferViews || [];
         const audioBufferViewIndex = jsonChunk.bufferViews.length;
-        jsonChunk.bufferViews.push({ buffer: 0, byteOffset: currentBufferByteLength, byteLength: audioArrayBuffer.byteLength });
+        jsonChunk.bufferViews.push({
+          buffer: 0,
+          byteOffset: currentBufferByteLength,
+          byteLength: audioArrayBuffer.byteLength
+        });
+
+        // Detect mime type
+        let mimeType = "audio/mpeg";
+        if (audioInput.name.endsWith('.wav')) mimeType = "audio/wav";
+        else if (audioInput.name.endsWith('.ogg')) mimeType = "audio/ogg";
 
         jsonChunk.extensions = jsonChunk.extensions || {};
         jsonChunk.extensions.KHR_audio_emitter = {
-          sources: [{ name: audioInput.name, type: "audio/mp3", bufferView: audioBufferViewIndex, gain: 1.0, loop: true }],
-          emitters: [{ name: "AR_Audio_Emitter", source: 0, gain: 1.0, distanceModel: "inverse", maxDistance: 10, refDistance: 1 }]
+          sources: [
+            {
+              name: audioInput.name,
+              type: mimeType,
+              bufferView: audioBufferViewIndex,
+              gain: 1.0,
+              loop: true
+            }
+          ],
+          emitters: [
+            {
+              name: "AR_Audio_Emitter",
+              source: 0,
+              gain: 1.0,
+              distanceModel: "inverse",
+              maxDistance: 10,
+              refDistance: 1
+            }
+          ]
         };
+
+        // Bind emitter to the root scene node or default node
+        if (jsonChunk.nodes && jsonChunk.nodes.length > 0) {
+          jsonChunk.nodes[0].extensions = jsonChunk.nodes[0].extensions || {};
+          jsonChunk.nodes[0].extensions.KHR_audio_emitter = { emitter: 0 };
+        }
 
         globalProcessedGlbBlob = createGLB(jsonChunk, binaryBuffers);
         downloadBtn.href = URL.createObjectURL(globalProcessedGlbBlob);
         downloadBtn.download = `audio_${glbInput.name}`;
         statusArea.classList.remove('hidden');
       } catch (err) {
-        alert("Error: " + err.message);
+        alert("GLB Error: " + err.message);
       } finally {
         btn.disabled = false; btn.textContent = "Process GLB & Download";
       }
     });
 
-    // Direct Preview Routing Buttons
+    // Button: Test USDZ (Downloads file + opens online 3D inspection sandbox)
     document.getElementById('preview-usdz-btn').addEventListener('click', () => {
       if (globalProcessedUsdzBlob) {
-        // Trigger direct file download to prevent desktop blob text page rendering
         const a = document.createElement('a');
         a.href = URL.createObjectURL(globalProcessedUsdzBlob);
         a.download = "audio_model.usdz";
@@ -372,24 +370,31 @@ def Xform "Root" (
         a.click();
         document.body.removeChild(a);
 
-        // Switch card view for iOS/Quick Look test flow
-        renderInViewer(globalProcessedUsdzBlob, 'audio_model.usdz');
+        // Open free AR validator sandbox in a new tab for instant cloud verification
+        window.open("https://ar-code.com/3d-viewer", "_blank");
       }
     });
 
+    // Button: Test GLB in Local Viewer Tab
     document.getElementById('preview-glb-btn').addEventListener('click', () => {
-      if (globalProcessedGlbBlob) renderInViewer(globalProcessedGlbBlob, 'audio_model.glb');
+      if (globalProcessedGlbBlob) {
+        switchTab('viewer');
+        const viewer = document.getElementById('live-viewer');
+        viewer.src = URL.createObjectURL(globalProcessedGlbBlob);
+      }
     });
 
     // Independent Viewer File Input Handler
     document.getElementById('viewer-file-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
-        renderInViewer(file, file.name);
+        switchTab('viewer');
+        const viewer = document.getElementById('live-viewer');
+        viewer.src = URL.createObjectURL(file);
       }
     });
 
-    // Handle GLB Viewer Load Events & Animations
+    // Handle Viewer Load Events & Animations
     document.getElementById('live-viewer').addEventListener('load', () => {
       const viewer = document.getElementById('live-viewer');
       if (viewer.availableAnimations && viewer.availableAnimations.length > 0) {
@@ -398,10 +403,10 @@ def Xform "Root" (
       document.getElementById('play-audio-btn').classList.remove('hidden');
     });
 
-    // User click trigger to unlock browser audio restrictions & force play
+    // Force Play Audio Handler
     document.getElementById('play-audio-btn').addEventListener('click', () => {
       const viewer = document.getElementById('live-viewer');
-      if (typeof viewer.play === 'function') {
+      if (viewer && typeof viewer.play === 'function') {
         viewer.currentTime = 0;
         viewer.play();
       }
