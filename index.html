@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Universal AR Audio Embedder & Viewer</title>
+  <title>Universal AR Audio Toolkit & Viewer</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- JSZip for USDZ manipulation -->
@@ -16,7 +16,7 @@
   <div class="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl space-y-6">
     <div>
       <h1 class="text-2xl font-bold text-white flex items-center gap-2">🎧 Universal AR Audio Toolkit</h1>
-      <p class="text-slate-400 text-sm mt-1">Embed and test spatial audio directly in your 3D models right in your browser.</p>
+      <p class="text-slate-400 text-sm mt-1">Embed and test spatial audio and animations directly in your 3D models right in your browser.</p>
     </div>
 
     <!-- Tab Switcher -->
@@ -98,13 +98,20 @@
       </div>
       
       <div class="relative w-full h-80 bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center">
-        <model-viewer id="live-viewer" camera-controls auto-rotate shadow-intensity="1" class="w-full h-full">
+        <!-- Enabled autoplay and camera controls -->
+        <model-viewer id="live-viewer" camera-controls auto-rotate autoplay shadow-intensity="1" class="w-full h-full">
           <div slot="poster" class="flex items-center justify-center h-full text-slate-500 text-sm">
             Upload or test a processed GLB model here
           </div>
         </model-viewer>
       </div>
-      <p class="text-xs text-slate-400 text-center">Note: Built-in audio playback works for GLB models featuring the <code class="text-purple-400">KHR_audio_emitter</code> extension.</p>
+
+      <!-- User Interaction Button to Unlock Browser Audio Policies -->
+      <button id="play-audio-btn" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition hidden">
+        🔊 Enable / Restart Audio & Animations
+      </button>
+
+      <p class="text-xs text-slate-400 text-center">Note: Click the button above or interact with the model to satisfy browser audio autoplay requirements.</p>
     </div>
 
   </div>
@@ -229,6 +236,7 @@ def Xform "Root" (
       const encoder = new TextEncoder();
       let jsonString = JSON.stringify(jsonChunk);
       
+      // FIX: Ensure strict 4-byte boundary padding for the JSON chunk using spaces
       let jsonBinary = encoder.encode(jsonString);
       const jsonPaddingLen = (4 - (jsonBinary.byteLength % 4)) % 4;
       if (jsonPaddingLen > 0) {
@@ -332,8 +340,27 @@ def Xform "Root" (
     document.getElementById('viewer-file-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
+        switchTab('viewer');
         const viewer = document.getElementById('live-viewer');
         viewer.src = URL.createObjectURL(file);
+      }
+    });
+
+    // Handle Viewer Load Events & Animations
+    document.getElementById('live-viewer').addEventListener('load', () => {
+      const viewer = document.getElementById('live-viewer');
+      if (viewer.availableAnimations && viewer.availableAnimations.length > 0) {
+        viewer.animationName = viewer.availableAnimations[0];
+      }
+      document.getElementById('play-audio-btn').classList.remove('hidden');
+    });
+
+    // User click trigger to unlock browser audio restrictions & force play
+    document.getElementById('play-audio-btn').addEventListener('click', () => {
+      const viewer = document.getElementById('live-viewer');
+      if (typeof viewer.play === 'function') {
+        viewer.currentTime = 0;
+        viewer.play();
       }
     });
   </script>
