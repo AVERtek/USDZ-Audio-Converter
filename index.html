@@ -60,7 +60,7 @@
       <div id="usdz-status" class="hidden text-center pt-2 space-y-2">
         <p class="text-sm text-emerald-400 font-medium">USDZ successfully packaged!</p>
         <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
-        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test USDZ in AR Quick Look</button>
+        <button type="button" id="preview-usdz-btn" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Test USDZ in AR Quick Look Card</button>
       </div>
     </div>
 
@@ -142,17 +142,20 @@
     let globalProcessedUsdzBlob = null;
 
     function renderInViewer(blob, filename) {
-      switchTab('viewer');
       const blobUrl = URL.createObjectURL(blob);
       const glbContainer = document.getElementById('glb-viewer-container');
       const usdzCard = document.getElementById('usdz-viewer-card');
       const audioBtn = document.getElementById('play-audio-btn');
 
-      if (filename.endsWith('.usdz')) {
+      switchTab('viewer');
+      if (filename.toLowerCase().endsWith('.usdz')) {
         glbContainer.classList.add('hidden');
         usdzCard.classList.remove('hidden');
         audioBtn.classList.add('hidden');
-        document.getElementById('ar-quick-look-link').href = blobUrl;
+        
+        const arLink = document.getElementById('ar-quick-look-link');
+        arLink.href = blobUrl;
+        arLink.download = filename;
       } else {
         usdzCard.classList.add('hidden');
         glbContainer.classList.remove('hidden');
@@ -360,7 +363,18 @@ def Xform "Root" (
 
     // Direct Preview Routing Buttons
     document.getElementById('preview-usdz-btn').addEventListener('click', () => {
-      if (globalProcessedUsdzBlob) renderInViewer(globalProcessedUsdzBlob, 'audio_model.usdz');
+      if (globalProcessedUsdzBlob) {
+        // Trigger direct file download to prevent desktop blob text page rendering
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(globalProcessedUsdzBlob);
+        a.download = "audio_model.usdz";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Switch card view for iOS/Quick Look test flow
+        renderInViewer(globalProcessedUsdzBlob, 'audio_model.usdz');
+      }
     });
 
     document.getElementById('preview-glb-btn').addEventListener('click', () => {
