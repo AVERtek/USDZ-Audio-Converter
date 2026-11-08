@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Universal AR Audio Toolkit & Diagnostic Validator</title>
+  <title>Universal AR Audio Toolkit & Diagnostic Auditor</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- JSZip for USDZ manipulation -->
@@ -54,13 +54,13 @@
           </div>
         </div>
         <button type="submit" id="usdz-btn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
-          Process USDZ & Run Audit
+          Process USDZ & Download
         </button>
       </form>
       <div id="usdz-status" class="hidden text-center pt-2 space-y-2">
         <p class="text-sm text-emerald-400 font-medium">USDZ Package Built Successfully!</p>
         <a id="usdz-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.usdz">📥 Download USDZ File</a>
-        <button type="button" onclick="switchTab('validator')" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 View Diagnostic Audit Report</button>
+        <button type="button" onclick="autoLoadAndAudit('usdz')" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Auto-Test Processed USDZ File</button>
       </div>
     </div>
 
@@ -78,20 +78,20 @@
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
         <button type="submit" id="glb-btn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow transition">
-          Process GLB & Run Audit
+          Process GLB & Download
         </button>
       </form>
       <div id="glb-status" class="hidden text-center pt-2 space-y-2">
         <p class="text-sm text-emerald-400 font-medium">GLB Package Built Successfully!</p>
         <a id="glb-download" class="inline-block w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" download="audio_model.glb">📥 Download GLB File</a>
-        <button type="button" onclick="switchTab('validator')" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 View Diagnostic Audit Report</button>
+        <button type="button" onclick="autoLoadAndAudit('glb')" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition">🔍 Auto-Test Processed GLB File</button>
       </div>
     </div>
 
     <!-- ==================== DIAGNOSTIC AUDITOR SECTION ==================== -->
     <div id="section-validator" class="space-y-4 hidden">
       <div>
-        <label class="block text-sm font-medium text-slate-300 mb-1">Upload Processed File to Audit (.glb or .usdz)</label>
+        <label class="block text-sm font-medium text-slate-300 mb-1">Active Test File or Upload (.glb or .usdz)</label>
         <input type="file" id="audit-file-input" accept=".glb,.usdz"
           class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
       </div>
@@ -115,8 +115,9 @@
 
     let lastProcessedBlob = null;
     let lastProcessedFilename = "";
+    let lastExpectedAudioName = "";
 
-    // --- USDZ Logic ---
+    // --- USDZ Logic with Corrected Apple Audio Schema Injection ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const usdzInput = document.getElementById('usdz-file').files[0];
@@ -169,6 +170,7 @@
 
         outputZip.file(safeAudioName, audioBuffer, { compression: "STORE" });
 
+        // Corrected Apple AR Quick Look audio schema format matching Preliminary_AudioAPI
         const sceneUsdaContent = `#usda 1.0
 (
     defaultPrim = "Root"
@@ -177,11 +179,12 @@
 def Xform "Root" (
     prepend references = @${modelFileName}@
 ) {
-    def SpatialAudio "AudioEmitter" {
-        rel filePath = @${safeAudioName}@
-        uniform token auralMode = "spatial"
-        uniform token playbackMode = "loopFromStage"
-        float volume = 1.0
+    def Xform "AudioEmitter" (
+        prepend apiSchemas = ["Preliminary_AudioAPI"]
+    ) {
+        rel preliminary:audio:amplitude = 1.0
+        rel preliminary:audio:filePath = @${safeAudioName}@
+        bool preliminary:audio:loop = true
         double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -192,21 +195,19 @@ def Xform "Root" (
 
         lastProcessedBlob = await outputZip.generateAsync({ type: "blob", mimeType: "model/vnd.usdz+zip", compression: "STORE" });
         lastProcessedFilename = `audio_${usdzInput.name}`;
+        lastExpectedAudioName = safeAudioName;
         
         downloadBtn.href = URL.createObjectURL(lastProcessedBlob);
         downloadBtn.download = lastProcessedFilename;
         statusArea.classList.remove('hidden');
-
-        // Automatically run diagnostic audit
-        runUsdzAudit(lastProcessedBlob, safeAudioName);
       } catch (err) {
         alert("USDZ Error: " + err.message);
       } finally {
-        btn.disabled = false; btn.textContent = "Process USDZ & Run Audit";
+        btn.disabled = false; btn.textContent = "Process USDZ & Download";
       }
     });
 
-    // --- GLB Logic ---
+    // --- GLB Logic with Fully Mapped Emitter & Sources Arrays ---
     async function parseGLB(arrayBuffer) {
       const dataView = new DataView(arrayBuffer);
       if (dataView.getUint32(0, true) !== 0x46546C67) throw new Error("Invalid GLB file.");
@@ -310,10 +311,28 @@ def Xform "Root" (
         if (audioInput.name.endsWith('.wav')) mimeType = "audio/wav";
         else if (audioInput.name.endsWith('.ogg')) mimeType = "audio/ogg";
 
+        // Corrected complete KHR_audio_emitter dictionary mapping sources and emitters arrays
         jsonChunk.extensions = jsonChunk.extensions || {};
         jsonChunk.extensions.KHR_audio_emitter = {
-          sources: [{ name: audioInput.name, type: mimeType, bufferView: audioBufferViewIndex, gain: 1.0, loop: true }],
-          emitters: [{ name: "AR_Audio_Emitter", source: 0, gain: 1.0, distanceModel: "inverse", maxDistance: 10, refDistance: 1 }]
+          sources: [
+            {
+              name: audioInput.name,
+              type: mimeType,
+              bufferView: audioBufferViewIndex,
+              gain: 1.0
+            }
+          ],
+          emitters: [
+            {
+              name: "AR_Audio_Emitter",
+              source: 0,
+              gain: 1.0,
+              loop: true,
+              distanceModel: "inverse",
+              maxDistance: 10,
+              refDistance: 1
+            }
+          ]
         };
 
         if (jsonChunk.nodes && jsonChunk.nodes.length > 0) {
@@ -327,15 +346,38 @@ def Xform "Root" (
         downloadBtn.href = URL.createObjectURL(lastProcessedBlob);
         downloadBtn.download = lastProcessedFilename;
         statusArea.classList.remove('hidden');
-
-        // Automatically run diagnostic audit
-        runGlbAudit(lastProcessedBlob);
       } catch (err) {
         alert("GLB Error: " + err.message);
       } finally {
-        btn.disabled = false; btn.textContent = "Process GLB & Run Audit";
+        btn.disabled = false; btn.textContent = "Process GLB & Download";
       }
     });
+
+    // --- Auto-Load & Audit Action (Triggers download + switches tab + runs inspection) ---
+    async function autoLoadAndAudit(type) {
+      if (!lastProcessedBlob) {
+        alert("No processed file found in memory. Please build a model first.");
+        return;
+      }
+
+      // 1. Trigger local download immediately
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(lastProcessedBlob);
+      a.download = lastProcessedFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // 2. Switch to Diagnostic Auditor Tab
+      switchTab('validator');
+
+      // 3. Run audit instantly
+      if (type === 'usdz') {
+        await runUsdzAudit(lastProcessedBlob, lastExpectedAudioName);
+      } else {
+        await runGlbAudit(lastProcessedBlob);
+      }
+    }
 
     // --- Self-Contained Diagnostic Auditor Functions ---
     async function runGlbAudit(blob) {
@@ -373,12 +415,13 @@ def Xform "Root" (
         const hasSceneUsda = !!loadedZip.files["scene.usda"];
         checks.push({ label: "Wrapper scene.usda Present", pass: hasSceneUsda });
 
-        const hasAudioFile = !!loadedZip.files[expectedAudioName];
-        checks.push({ label: `Embedded Audio Asset Found (${expectedAudioName})`, pass: hasAudioFile });
+        const audioFileFound = expectedAudioName ? !!loadedZip.files[expectedAudioName] : Object.keys(loadedZip.files).some(f => f.match(/\.(mp3|wav|m4a)$/i));
+        checks.push({ label: `Embedded Audio Asset Verified (${expectedAudioName || 'Audio Track'})`, pass: audioFileFound });
 
         let usdaText = hasSceneUsda ? await loadedZip.files["scene.usda"].async("text") : "";
-        const hasAudioSchema = usdaText.includes("SpatialAudio") || usdaText.includes("Preliminary_AudioAPI");
-        checks.push({ label: "Apple Audio Schema Declared", pass: hasAudioSchema });
+        // Updated check to match the correct Apple AR Quick Look schema signature
+        const hasAudioSchema = usdaText.includes("Preliminary_AudioAPI") || usdaText.includes("SpatialAudio");
+        checks.push({ label: "Apple Preliminary_AudioAPI Schema Declared", pass: hasAudioSchema });
 
         renderAuditReport(resultsDiv, "USDZ", checks);
       } catch (err) {
@@ -392,7 +435,7 @@ def Xform "Root" (
         <div class="flex items-center justify-between border-b border-slate-700 pb-2">
           <span class="font-bold text-white uppercase">${format} Diagnostic Audit</span>
           <span class="px-2 py-0.5 text-xs font-bold rounded ${allPassed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">
-            ${allPassed ? '✅ PASS (Ready for Deployment)' : '❌ FAIL (Structure Mismatch)'}
+            ${allPassed ? '✅ PASS (Deployment Ready)' : '❌ FAIL (Structure Mismatch)'}
           </span>
         </div>
         <ul class="space-y-2 pt-1">
@@ -416,7 +459,7 @@ def Xform "Root" (
       if (file.name.endsWith('.glb')) {
         await runGlbAudit(file);
       } else if (file.name.endsWith('.usdz')) {
-        await runUsdzAudit(file, "audio"); // general check
+        await runUsdzAudit(file, null);
       } else {
         document.getElementById('audit-results').innerHTML = `<p class="text-amber-400">Please upload a .glb or .usdz file.</p>`;
       }
