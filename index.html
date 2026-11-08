@@ -124,25 +124,71 @@
 
         const zip = new JSZip();
         const loadedZip = await zip.loadAsync(usdzInput);
-        const audioBuffer = await audioInput.arrayBuffer();
-        loadedZip.file(audioInput.name, audioBuffer, { compression: "STORE" });
 
-        let usdaFileName = null;
+        // Find existing model file (.usdc or .usda) inside the package
+        let modelFileName = null;
         for (let filename in loadedZip.files) {
-          if (filename.endsWith('.usda')) { usdaFileName = filename; break; }
+          if (!loadedZip.files[filename].dir) {
+            if (filename.endsWith('.usdc') || filename.endsWith('.usda')) {
+              if (filename !== 'scene.usda' && filename !== 'audio_scene.usda') {
+                modelFileName = filename;
+                break;
+              }
+            }
+          }
         }
 
-        const audioSnippet = `\ndef Xform "AudioEmitter" (\n    prepend apiSchemas = ["Preliminary_AudioAPI"]\n) {\n    rel preliminary:audio:amplitude = 1.0\n    rel preliminary:audio:filePath = @${audioInput.name}@\n    bool preliminary:audio:loop = true\n    double3 xformOp:translate = (${posX}, ${posY}, ${posZ})\n    uniform token[] xformOpOrder = ["xformOp:translate"]\n}\n`;
-
-        if (usdaFileName) {
-          let usdaText = await loadedZip.files[usdaFileName].async("text");
-          usdaText += audioSnippet;
-          loadedZip.file(usdaFileName, usdaText, { compression: "STORE" });
-        } else {
-          loadedZip.file("audio_scene.usda", `#usda 1.0\n${audioSnippet}`, { compression: "STORE" });
+        if (!modelFileName) {
+          throw new Error("No valid USD model (.usdc or .usda) found inside the USDZ file.");
         }
 
-        const outputBlob = await loadedZip.generateAsync({ type: "blob", mimeType: "model/vnd.usdz+zip", compression: "STORE" });
+        const safeAudioName = audioInput.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const audioBuffer = await audioInput.arrayBuffer();
+        
+        // Build a fresh output container to avoid corruption
+        const outputZip = new JSZip();
+
+        // Copy model file
+        const modelData = await loadedZip.files[modelFileName].async("arraybuffer");
+        outputZip.file(modelFileName, modelData, { compression: "STORE" });
+
+        // Copy other assets (textures, etc.) if any
+        for (let filename in loadedZip.files) {
+          if (filename !== modelFileName && !loadedZip.files[filename].dir) {
+            if (!filename.endsWith('.usda') && !filename.endsWith('.usdc')) {
+              const assetData = await loadedZip.files[filename].async("arraybuffer");
+              outputZip.file(filename, assetData, { compression: "STORE" });
+            }
+          }
+        }
+
+        // Add audio file with STORE compression
+        outputZip.file(safeAudioName, audioBuffer, { compression: "STORE" });
+
+        // Generate wrapper USDA file referencing model + audio emitter
+        const sceneUsdaContent = `#usda 1.0
+(
+    defaultPrim = "Root"
+)
+
+def Xform "Root" (
+    prepend references = @${modelFileName}@
+) {
+    def Xform "AudioEmitter" (
+        prepend apiSchemas = ["Preliminary_AudioAPI"]
+    ) {
+        rel preliminary:audio:amplitude = 1.0
+        rel preliminary:audio:filePath = @${safeAudioName}@
+        bool preliminary:audio:loop = true
+        double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+`;
+
+        outputZip.file("scene.usda", sceneUsdaContent, { compression: "STORE" });
+
+        const outputBlob = await outputZip.generateAsync({ type: "blob", mimeType: "model/vnd.usdz+zip", compression: "STORE" });
         downloadBtn.href = URL.createObjectURL(outputBlob);
         downloadBtn.download = `audio_${usdzInput.name}`;
         statusArea.classList.remove('hidden');
