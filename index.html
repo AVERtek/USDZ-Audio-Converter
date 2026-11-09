@@ -117,7 +117,7 @@
     let lastProcessedFilename = "";
     let lastExpectedAudioName = "";
 
-    // --- USDZ Builder Logic with Corrected Apple SpatialAudio Syntax ---
+    // --- USDZ Builder Logic with Matching Working File Structure ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const usdzInput = document.getElementById('usdz-file').files[0];
@@ -139,11 +139,13 @@
         const loadedZip = await zip.loadAsync(usdzInput);
 
         let modelFileName = null;
+        let modelFileExt = "";
         for (let filename in loadedZip.files) {
           if (!loadedZip.files[filename].dir) {
             if (filename.endsWith('.usdc') || filename.endsWith('.usda')) {
-              if (filename !== 'scene.usda' && filename !== 'audio_scene.usda') {
+              if (filename !== 'scene.usda') {
                 modelFileName = filename;
+                modelFileExt = filename.split('.').pop();
                 break;
               }
             }
@@ -156,22 +158,30 @@
         const audioBuffer = await audioInput.arrayBuffer();
         
         const outputZip = new JSZip();
-        const modelData = await loadedZip.files[modelFileName].async("arraybuffer");
-        outputZip.file(modelFileName, modelData, { compression: "STORE" });
 
         for (let filename in loadedZip.files) {
-          if (filename !== modelFileName && !loadedZip.files[filename].dir) {
-            if (!filename.endsWith('.usda') && !filename.endsWith('.usdc')) {
-              const assetData = await loadedZip.files[filename].async("arraybuffer");
-              outputZip.file(filename, assetData, { compression: "STORE" });
-            }
+          if (!loadedZip.files[filename].dir && filename !== 'scene.usda') {
+            const assetData = await loadedZip.files[filename].async("arraybuffer");
+            outputZip.file(filename, assetData, { compression: "STORE" });
           }
         }
 
         outputZip.file(safeAudioName, audioBuffer, { compression: "STORE" });
 
-        // Fully compliant Apple AR Quick Look SpatialAudio Schema definition
-        const sceneUsdaContent = `#usda 1.0
+        if (modelFileExt === 'usda') {
+          let primarySceneContent = await loadedZip.files[modelFileName].async("text");
+          primarySceneContent += `
+\ndef SpatialAudio "AudioEmitter" {
+    rel audio:filePath = @${safeAudioName}@
+    float audio:gain = 1.0
+    bool audio:loop = true
+    double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+`;
+          outputZip.file(modelFileName, primarySceneContent, { compression: "STORE" });
+        } else {
+          const directUsdaContent = `#usda 1.0
 (
     defaultPrim = "Root"
 )
@@ -188,8 +198,8 @@ def Xform "Root" (
     }
 }
 `;
-
-        outputZip.file("scene.usda", sceneUsdaContent, { compression: "STORE" });
+          outputZip.file("scene.usda", directUsdaContent, { compression: "STORE" });
+        }
 
         lastProcessedBlob = await outputZip.generateAsync({ type: "blob", mimeType: "model/vnd.usdz+zip", compression: "STORE" });
         lastProcessedFilename = `audio_${usdzInput.name}`;
@@ -311,25 +321,8 @@ def Xform "Root" (
 
         jsonChunk.extensions = jsonChunk.extensions || {};
         jsonChunk.extensions.KHR_audio_emitter = {
-          sources: [
-            {
-              name: audioInput.name,
-              type: mimeType,
-              bufferView: audioBufferViewIndex,
-              gain: 1.0
-            }
-          ],
-          emitters: [
-            {
-              name: "AR_Audio_Emitter",
-              source: 0,
-              gain: 1.0,
-              loop: true,
-              distanceModel: "inverse",
-              maxDistance: 10,
-              refDistance: 1
-            }
-          ]
+          sources: [{ name: audioInput.name, type: mimeType, bufferView: audioBufferViewIndex, gain: 1.0 }],
+          emitters: [{ name: "AR_Audio_Emitter", source: 0, gain: 1.0, loop: true, distanceModel: "inverse", maxDistance: 10, refDistance: 1 }]
         };
 
         if (jsonChunk.nodes && jsonChunk.nodes.length > 0) {
@@ -409,13 +402,19 @@ def Xform "Root" (
         const loadedZip = await zip.loadAsync(blob);
         let checks = [];
 
-        const hasSceneUsda = !!loadedZip.files["scene.usda"];
-        checks.push({ label: "Wrapper scene.usda Present", pass: hasSceneUsda });
+        // Support both direct .usda injection or root scene.usda wrapper layout
+        const hasSceneUsda = !!loadedZip.files["scene.usda"] || Object.keys(loadedZip.files).some(f => f.endsWith('.usda'));
+        checks.push({ label: "Valid USD Scene Structure Present", pass: hasSceneUsda });
 
         const audioFileFound = expectedAudioName ? !!loadedZip.files[expectedAudioName] : Object.keys(loadedZip.files).some(f => f.match(/\.(mp3|wav|m4a)$/i));
         checks.push({ label: `Embedded Audio Asset Verified (${expectedAudioName || 'Audio Track'})`, pass: audioFileFound });
 
-        let usdaText = hasSceneUsda ? await loadedZip.files["scene.usda"].async("text") : "";
+        let usdaText = "";
+        for (let filename in loadedZip.files) {
+          if (filename.endsWith('.usda')) {
+            usdaText += await loadedZip.files[filename].async("text") + "\n";
+          }
+        }
         const hasAudioSchema = usdaText.includes("SpatialAudio") && usdaText.includes("audio:filePath");
         checks.push({ label: "Apple SpatialAudio Schema Declared", pass: hasAudioSchema });
 
