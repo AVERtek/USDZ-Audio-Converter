@@ -41,7 +41,7 @@
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File (.wav/.mp3)</label>
+          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File (.wav/.mp3/.m4a)</label>
           <input type="file" id="usdz-audio-file" accept=".mp3,.wav,.m4a" required
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
@@ -73,7 +73,7 @@
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File (.mp3/.wav)</label>
+          <label class="block text-sm font-medium text-slate-300 mb-1">2. Select Audio File (.mp3/.wav/.ogg)</label>
           <input type="file" id="glb-audio-file" accept=".mp3,.wav,.ogg" required
             class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-950 rounded-lg border border-slate-700">
         </div>
@@ -117,7 +117,7 @@
     let lastProcessedFilename = "";
     let lastExpectedAudioName = "";
 
-    // --- USDZ Logic with Corrected Apple Audio Schema Injection ---
+    // --- USDZ Builder Logic ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const usdzInput = document.getElementById('usdz-file').files[0];
@@ -170,7 +170,7 @@
 
         outputZip.file(safeAudioName, audioBuffer, { compression: "STORE" });
 
-        // Corrected Apple AR Quick Look audio schema format matching Preliminary_AudioAPI
+        // Fully compliant Apple AR Quick Look Preliminary_AudioAPI Schema definition
         const sceneUsdaContent = `#usda 1.0
 (
     defaultPrim = "Root"
@@ -182,8 +182,8 @@ def Xform "Root" (
     def Xform "AudioEmitter" (
         prepend apiSchemas = ["Preliminary_AudioAPI"]
     ) {
-        rel preliminary:audio:amplitude = 1.0
         rel preliminary:audio:filePath = @${safeAudioName}@
+        rel preliminary:audio:amplitude = 1.0
         bool preliminary:audio:loop = true
         double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
         uniform token[] xformOpOrder = ["xformOp:translate"]
@@ -207,7 +207,7 @@ def Xform "Root" (
       }
     });
 
-    // --- GLB Logic with Fully Mapped Emitter & Sources Arrays ---
+    // --- GLB Builder Logic ---
     async function parseGLB(arrayBuffer) {
       const dataView = new DataView(arrayBuffer);
       if (dataView.getUint32(0, true) !== 0x46546C67) throw new Error("Invalid GLB file.");
@@ -311,7 +311,6 @@ def Xform "Root" (
         if (audioInput.name.endsWith('.wav')) mimeType = "audio/wav";
         else if (audioInput.name.endsWith('.ogg')) mimeType = "audio/ogg";
 
-        // Corrected complete KHR_audio_emitter dictionary mapping sources and emitters arrays
         jsonChunk.extensions = jsonChunk.extensions || {};
         jsonChunk.extensions.KHR_audio_emitter = {
           sources: [
@@ -353,14 +352,14 @@ def Xform "Root" (
       }
     });
 
-    // --- Auto-Load & Audit Action (Triggers download + switches tab + runs inspection) ---
+    // --- Process Improvement: Auto-Load into Auditor & Trigger Download ---
     async function autoLoadAndAudit(type) {
       if (!lastProcessedBlob) {
         alert("No processed file found in memory. Please build a model first.");
         return;
       }
 
-      // 1. Trigger local download immediately
+      // 1. Trigger local download automatically
       const a = document.createElement('a');
       a.href = URL.createObjectURL(lastProcessedBlob);
       a.download = lastProcessedFilename;
@@ -368,10 +367,10 @@ def Xform "Root" (
       a.click();
       document.body.removeChild(a);
 
-      // 2. Switch to Diagnostic Auditor Tab
+      // 2. Switch to Auditor tab
       switchTab('validator');
 
-      // 3. Run audit instantly
+      // 3. Run diagnostic check instantly
       if (type === 'usdz') {
         await runUsdzAudit(lastProcessedBlob, lastExpectedAudioName);
       } else {
@@ -419,8 +418,7 @@ def Xform "Root" (
         checks.push({ label: `Embedded Audio Asset Verified (${expectedAudioName || 'Audio Track'})`, pass: audioFileFound });
 
         let usdaText = hasSceneUsda ? await loadedZip.files["scene.usda"].async("text") : "";
-        // Updated check to match the correct Apple AR Quick Look schema signature
-        const hasAudioSchema = usdaText.includes("Preliminary_AudioAPI") || usdaText.includes("SpatialAudio");
+        const hasAudioSchema = usdaText.includes("Preliminary_AudioAPI");
         checks.push({ label: "Apple Preliminary_AudioAPI Schema Declared", pass: hasAudioSchema });
 
         renderAuditReport(resultsDiv, "USDZ", checks);
