@@ -117,7 +117,7 @@
     let lastProcessedFilename = "";
     let lastExpectedAudioName = "";
 
-    // --- USDZ Builder Logic ---
+    // --- USDZ Builder Logic with Corrected Apple SpatialAudio Syntax ---
     document.getElementById('usdz-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const usdzInput = document.getElementById('usdz-file').files[0];
@@ -170,7 +170,7 @@
 
         outputZip.file(safeAudioName, audioBuffer, { compression: "STORE" });
 
-        // Fully compliant Apple AR Quick Look Preliminary_AudioAPI Schema definition
+        // Fully compliant Apple AR Quick Look SpatialAudio Schema definition
         const sceneUsdaContent = `#usda 1.0
 (
     defaultPrim = "Root"
@@ -179,12 +179,10 @@
 def Xform "Root" (
     prepend references = @${modelFileName}@
 ) {
-    def Xform "AudioEmitter" (
-        prepend apiSchemas = ["Preliminary_AudioAPI"]
-    ) {
-        rel preliminary:audio:filePath = @${safeAudioName}@
-        rel preliminary:audio:amplitude = 1.0
-        bool preliminary:audio:loop = true
+    def SpatialAudio "AudioEmitter" {
+        rel audio:filePath = @${safeAudioName}@
+        float audio:gain = 1.0
+        bool audio:loop = true
         double3 xformOp:translate = (${posX}, ${posY}, ${posZ})
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -418,8 +416,8 @@ def Xform "Root" (
         checks.push({ label: `Embedded Audio Asset Verified (${expectedAudioName || 'Audio Track'})`, pass: audioFileFound });
 
         let usdaText = hasSceneUsda ? await loadedZip.files["scene.usda"].async("text") : "";
-        const hasAudioSchema = usdaText.includes("Preliminary_AudioAPI");
-        checks.push({ label: "Apple Preliminary_AudioAPI Schema Declared", pass: hasAudioSchema });
+        const hasAudioSchema = usdaText.includes("SpatialAudio") && usdaText.includes("audio:filePath");
+        checks.push({ label: "Apple SpatialAudio Schema Declared", pass: hasAudioSchema });
 
         renderAuditReport(resultsDiv, "USDZ", checks);
       } catch (err) {
